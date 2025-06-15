@@ -14,6 +14,7 @@ import vectorbt as vbt
 from vectorbt import _typing as tp
 
 DATASET_PATH = os.environ.get("DATASET_PATH", "data")
+TRADING_DAYS_PER_YEAR = 252
 
 class StooqData(vbt.Data):
     """Extracts ohlcv data from text files downloaded from stooq.com/db/h."""
