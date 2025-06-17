@@ -19,11 +19,11 @@ def create_rand_hold_topk_orders(rand_gen, close_prices, top_k=3, approx_trigger
     """Creates random intervals to rank stocks by best performance over the interval, select top k to order.
     If new stock goes into top k, then exit dropped stock and rebalance remaining cash.
 
+    :param rand_gen: random number generator.
     :param close_prices: End of day prices for assets.
     :param top_k: Number of assets to hold on at any given time.
     :param init_cash: Starting cash amount to distribute across portfolio assets.
     :param approx_triggers_per_year: expected number of triggers to eval/re-balance assets per year.
-    :param rand_gen: random number generator.
     """
     # set random trigger dates
     num_rows = close_prices.shape[0]
@@ -89,7 +89,7 @@ def create_rand_hold_topk_orders(rand_gen, close_prices, top_k=3, approx_trigger
     
     return trigger_close_prices.fillna(0.001), sizes
 
-def main(args):
+def simulate(args):
     sp500_tickers = pd.read_csv(f"{DATASET_PATH}/sp_500_basics.csv")
     symbols = [str.lower(s) for s in sp500_tickers['Symbol']]
     #symbols = ['goog', 'msft', 'nvda', 'mmm', 'aa', 'xrx']
@@ -120,10 +120,11 @@ def main(args):
             lock_cash=True,
             fixed_fees=0.01)
    
-        print(topk_pf.returns_stats(freq='d'))
-        print(topk_pf.trades.records_readable.to_csv(None, float_format='%.2f', sep='\t'))
         if args.out != None:
             topk_pf.save(args.out.format(r))
+        
+        print(topk_pf.returns_stats(freq='d'))
+        print(topk_pf.trades.records_readable.to_csv(None, float_format='%.2f', sep='\t'))
 
 def spy(args):
     spy_data = StooqData.download(['spy','ge'], start=args.start_date, end=args.end_date, missing_columns='drop')
@@ -144,10 +145,10 @@ if __name__ == '__main__':
     parser.add_argument("--seed", dest='seed', default=42, type=int, help='seed for random. default: 42') 
     parser.add_argument("--debug", dest='level', default=logging.INFO, action='store_const', const=logging.DEBUG, help='writeout debug statements') 
     parser.add_argument("--repetitions", dest='repetitions', default=1, type=int, help='number of repetitions.') 
-    parser.add_argument("--out", dest='out', default=None, help='save portfolio') 
+    parser.add_argument("--out", dest='out', default=None, help='save portfolio(s). If multiple repetitions are specified, then use format string to assign numbers.') 
 
     args = parser.parse_args()
     logging.basicConfig(level=args.level, format="%(asctime)s:%(process)d:%(levelname)s:%(message)s")
 
-    main(args)
+    simulate(args)
     #spy(args)
