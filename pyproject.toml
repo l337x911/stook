@@ -1,0 +1,19 @@
+[project]
+name = "stook"
+version = "0.0.1"
+dependencies = [
+    "numpy",
+    "pandas",
+    "plotly",
+    "seaborn",
+    "networkx",
+    "scikit_learn",
+    "scipy",
+    "vectorbt",
+]
+pythonpath = [
+    "src",
+]
+testpaths = [
+    "tests",
+]

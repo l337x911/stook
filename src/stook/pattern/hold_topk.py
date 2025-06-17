@@ -15,7 +15,7 @@ import numpy as np
 from stook.etl.dataset import TRADING_DAYS_PER_YEAR, DATASET_PATH, StooqData
 
 
-def create_rand_hold_topk_orders(close_prices, top_k=3, approx_triggers_per_year=4, seed=42):
+def create_rand_hold_topk_orders(rand_gen, close_prices, top_k=3, approx_triggers_per_year=4):
     """Creates random intervals to rank stocks by best performance over the interval, select top k to order.
     If new stock goes into top k, then exit dropped stock and rebalance remaining cash.
 
@@ -23,12 +23,11 @@ def create_rand_hold_topk_orders(close_prices, top_k=3, approx_triggers_per_year
     :param top_k: Number of assets to hold on at any given time.
     :param init_cash: Starting cash amount to distribute across portfolio assets.
     :param approx_triggers_per_year: expected number of triggers to eval/re-balance assets per year.
-    :param seed: seed to random number generator.
+    :param rand_gen: random number generator.
     """
     # set random trigger dates
-    rnd_gen = np.random.default_rng(seed)
     num_rows = close_prices.shape[0]
-    rnd_trigger_lengths = rnd_gen.poisson(TRADING_DAYS_PER_YEAR / approx_triggers_per_year, close_prices.shape[0])
+    rnd_trigger_lengths = rand_gen.poisson(TRADING_DAYS_PER_YEAR / approx_triggers_per_year, close_prices.shape[0])
     trigger_indices = np.cumsum(rnd_trigger_lengths)
     trigger_indices = list(trigger_indices[trigger_indices < num_rows])
     if trigger_indices[-1] != (num_rows - 1):
@@ -100,15 +99,19 @@ def main(args):
     logging.info(f"tracking sp500 symbols: {len(symbols)} with {len(missing_symbols)} missing.") 
     stook_data = StooqData.download(symbols, start=args.start_date, end=args.end_date, missing_columns='drop')
     open_prices, high_prices, low_prices, close_prices, volumes = stook_data.get()
+    
+    rand_gen = np.random.default_rng(args.seed)
 
     init_cash = 1000
-    price, size = create_rand_hold_topk_orders(close_prices,
+    for r in range(args.repetitions):
+        price, size = create_rand_hold_topk_orders(
+            rand_gen,
+            close_prices,
             top_k=args.top_k,
-            approx_triggers_per_year=args.triggers_per_year,
-            seed=args.seed)
-    logging.info(f"triggered {len(price)} times.")
+            approx_triggers_per_year=args.triggers_per_year)
+        logging.info(f"triggered {len(price)} times.")
 
-    topk_pf = vbt.Portfolio.from_orders(price,
+        topk_pf = vbt.Portfolio.from_orders(price,
             size=size,
             init_cash=init_cash,
             size_type=vbt.portfolio.enums.SizeType.Percent,
@@ -117,21 +120,20 @@ def main(args):
             lock_cash=True,
             fixed_fees=0.01)
    
-    print(topk_pf.returns_stats(freq='d'))
-    spy_data = StooqData.download(['spy','dow'], start=args.start_date, end=args.end_date, missing_columns='drop')
+        print(topk_pf.returns_stats(freq='d'))
+        print(topk_pf.trades.records_readable.to_csv(None, float_format='%.2f', sep='\t'))
+        if args.out != None:
+            topk_pf.save(args.out.format(r))
+
+def spy(args):
+    spy_data = StooqData.download(['spy','ge'], start=args.start_date, end=args.end_date, missing_columns='drop')
     open_prices, high_prices, low_prices, close_prices, volumes = spy_data.get()
     spy_pf = vbt.Portfolio.from_holding(close_prices.loc[:,['spy',]],
-            init_cash=init_cash,
+            init_cash=1000,
             cash_sharing=True,
             fixed_fees=0.01)
-
     print(spy_pf.returns_stats(freq='d'))
-    #print(topk_pf.orders.records_readable.to_csv(None, float_format='%.2f'))
-    print(topk_pf.trades.records_readable.to_csv(None, float_format='%.2f', sep='\t'))
-    
-    if args.out != None:
-        with open(args.out, 'wb') as f:
-            dill.dump(topk_pf, f)
+    spy_pf.save("00_25_spy.pf")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Simulate triggering switch at random intervals.")
@@ -141,9 +143,11 @@ if __name__ == '__main__':
     parser.add_argument("--triggers-per-year", dest='triggers_per_year', type=int, default=8, help='number of triggers per year. default: 8') 
     parser.add_argument("--seed", dest='seed', default=42, type=int, help='seed for random. default: 42') 
     parser.add_argument("--debug", dest='level', default=logging.INFO, action='store_const', const=logging.DEBUG, help='writeout debug statements') 
+    parser.add_argument("--repetitions", dest='repetitions', default=1, type=int, help='number of repetitions.') 
     parser.add_argument("--out", dest='out', default=None, help='save portfolio') 
 
     args = parser.parse_args()
     logging.basicConfig(level=args.level, format="%(asctime)s:%(process)d:%(levelname)s:%(message)s")
 
     main(args)
+    #spy(args)
