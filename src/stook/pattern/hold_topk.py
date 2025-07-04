@@ -123,7 +123,7 @@ def simulate(args):
         if args.out != None:
             topk_pf.save(args.out.format(r))
         
-        print(topk_pf.returns_stats(freq='d'))
+        print(topk_pf.returns_stats(freq='d', year_freq='252d', group_by=True))
         print(topk_pf.trades.records_readable.to_csv(None, float_format='%.2f', sep='\t'))
 
 def spy(args):
@@ -133,7 +133,8 @@ def spy(args):
             init_cash=1000,
             cash_sharing=True,
             fixed_fees=0.01)
-    print(spy_pf.returns_stats(freq='d'))
+    #print(spy_pf.returns_stats(freq='d'))
+    print(spy_pf.returns_stats(freq='d', year_freq='252d', group_by=True))
     spy_pf.save("00_25_spy.pf")
 
 if __name__ == '__main__':
