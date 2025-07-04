@@ -11,7 +11,7 @@ class PortfolioTests(unittest.TestCase):
 
     def test_annualized_returns(self):
         """Tests annualized return for multi-asset portfolio."""
-        symbols = ['spy', 'goog']
+        symbols = ['SPY', 'GOOG']
         _, _, _, close_price, _ = StooqData.download(symbols, missing_index='drop', start="2024-01-01", end="2024-06-01")\
                 .get()
         n = close_price.shape[0]

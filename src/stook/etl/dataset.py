@@ -26,6 +26,7 @@ class StooqData(vbt.Data):
         missing = []
         valids = []
         for symbol in symbols:
+            symbol = symbol.lower()
             stock_paths = [n for n in Path(stock_root).glob(f"**/{symbol}.*txt")]
             if len(stock_paths) == 0:
                 missing.append(symbol)
@@ -37,6 +38,8 @@ class StooqData(vbt.Data):
     def download_symbol(cls, symbol: tp.Label, start: tp.Optional[tp.DatetimeLike] = None, end: tp.Optional[tp.DatetimeLike] = None) -> tp.Frame:
         """Loads a symbol's open, high, low, close, and volume on a given time range as a pandas dataframe."""
         stock_root = f"{DATASET_PATH}/d_us_txt/data/daily/us"
+        symbol = symbol.lower()
+
         stock_paths = [n for n in Path(stock_root).glob(f"**/{symbol}.*txt")]
         data = []
         if len(stock_paths) == 0:
